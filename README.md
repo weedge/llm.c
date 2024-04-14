@@ -43,7 +43,7 @@ You can have a look inside the `Makefile` and its comments. It will try to autod
 
 ```
 # try this first
-CFLAGS = -O3 -Ofast -fno-fast-math -Wno-unused-result
+CFLAGS = -Ofast -fno-fast-math -Wno-unused-result
 # try this second
 CFLAGS = -O3 -Wno-unused-result
 ```
@@ -141,20 +141,21 @@ make train_gpt2cu
 This will run GPT-2 (124M) in one file of pure CUDA (see [train_gpt2.cu](train_gpt2.cu)), using batch size 4 and sequence length 1024. This will print a bunch of hyperparameters and then the "training":
 
 ```
-val loss 4.517294
-step 0: train loss 4.367857 (took 112.135004 ms)
-step 1: train loss 4.406483 (took 112.555327 ms)
-step 2: train loss 4.484838 (took 111.380248 ms)
+val loss 4.517179
+step 0: train loss 4.367631 (took 25.868564 ms)
+step 1: train loss 4.406341 (took 26.112257 ms)
+step 2: train loss 4.484756 (took 26.124789 ms)
+step 3: train loss 4.345182 (took 26.149837 ms)
 ...
 ```
 
-The loss is changing because we are still loading real data batches from our dataset, but there is no training so they won't go down over time. In any case, on my A100 40GB PCIe GPU we are seeing about 111ms/iteration. We can compare this to PyTorch fp32 training by calling our python script like this:
+The loss is changing because we are still loading real data batches from our dataset, but there is no training so they won't go down over time. In any case, on my A100 40GB PCIe GPU we are seeing about 28ms/iteration. We can compare this to PyTorch fp32 training by calling our python script like this:
 
 ```bash
 python train_gpt2.py --inference_only 1 --write_tensors 0 --sequence_length 1024 --batch_size 4
 ```
 
-Which shows time per iteration with the same hyperparameters (batch 4, time 1024) at 180ms/iteration. We can then enable `torch.compile` by adding the `--compile 1` flag:
+Which shows time per iteration with the same hyperparameters (batch 4, time 1024) at 104ms/iteration. We can then enable `torch.compile` by adding the `--compile 1` flag:
 
 ```bash
 python train_gpt2.py --inference_only 1 --write_tensors 0 --sequence_length 1024 --batch_size 4 --compile 1
@@ -166,7 +167,16 @@ And see that the first iteration now takes 20 seconds (compilation time), but al
 python train_gpt2.py --inference_only 1 --write_tensors 0 --sequence_length 1024 --batch_size 4 --compile 1 --tensorcores 1
 ```
 
-The time drops down to 26ms/iteration. So we have a gap to close :)! At the current 111ms we are about 4.2X slower.
+The time drops down to 26.2ms/iteration. So at the current 26.2ms/iteration we, amusingly and right now, have an identical running time. This somewhat makes sense because most of the FLOPs are in the matmul, and we both call about the same kernels. The remainder of the difference is likely our self-attention implementation, and possibly the round trips for GeLU, and permute/unpermute.
+
+## discussions
+
+Ways of organizing development:
+
+- Experiencing a concrete issue with the repo? Use [Issues](https://github.com/karpathy/llm.c/issues).
+- Have some code to contribute? Open a [PR](https://github.com/karpathy/llm.c/pulls)
+- Chat about the repo, ask questions, etc.? Look at [Discussions](https://github.com/karpathy/llm.c/discussions).
+- Something faster? I created a new `#llmc` channel on my [Zero to Hero Discord channel](https://discord.gg/3zy8kqD9Cp).
 
 ## license
 

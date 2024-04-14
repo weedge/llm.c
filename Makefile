@@ -19,6 +19,12 @@ ifeq ($(shell uname), Darwin)
     LDLIBS += -lomp
     INCLUDES += -I/opt/homebrew/opt/libomp/include
     $(info NICE Compiling with OpenMP support)
+  else ifeq ($(shell [ -d /usr/local/opt/libomp/lib ] && echo "exists"), exists)
+    CFLAGS += -Xclang -fopenmp -DOMP
+    LDFLAGS += -L/usr/local/opt/libomp/lib
+    LDLIBS += -lomp
+    INCLUDES += -I/usr/local/opt/libomp/include
+    $(info NICE Compiling with OpenMP support)
   else
     $(warning OOPS Compiling without OpenMP support)
   endif
@@ -47,10 +53,10 @@ test_gpt2: test_gpt2.c
 
 # possibly may want to disable warnings? e.g. append -Xcompiler -Wno-unused-result
 train_gpt2cu: train_gpt2.cu
-	nvcc -O3 --use_fast_math $< -lcublas -o $@
+	nvcc -O3 --use_fast_math $< -lcublas -lcublasLt -o $@
 
 test_gpt2cu: test_gpt2.cu
-	nvcc -O3 --use_fast_math $< -lcublas -o $@
+	nvcc -O3 --use_fast_math $< -lcublas -lcublasLt -o $@
 
 clean:
 	rm -f train_gpt2 test_gpt2 train_gpt2cu test_gpt2cu
